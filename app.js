@@ -89,12 +89,17 @@
 
   /* ----------------------------------------------------------- network layer */
 
-  // Browsers block cross-site reads from these sources, so requests go through public CORS proxies.
+  // Browsers block cross-site reads from these sources, so requests go through a relay.
+  // RELAY is your own Cloudflare Worker (see worker/worker.js and the README), e.g.
+  // 'https://nue-relay.yourname.workers.dev/'. Leave it empty to use only the public proxies below,
+  // which are free but often blocked or rate limited. The public proxies stay as a backup.
+  var RELAY = '';
   var PROXIES = [
     function (u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
     function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); },
     function (u) { return 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u); }
   ];
+  if (RELAY) PROXIES.unshift(function (u) { return RELAY.replace(/\/?$/, '/') + '?url=' + encodeURIComponent(u); });
   var proxyStart = 0; // remember which proxy worked last
 
   async function viaProxy(url, validate) {
