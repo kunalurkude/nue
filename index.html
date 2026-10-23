@@ -4,13 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>nue</title>
-<meta name="description" content="nue: a daily news wire built around your interests, with a stock watchlist and technical analysis.">
-<meta name="theme-color" content="#EDF0F5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0A101C" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232848E8'/%3E%3Ctext x='16' y='23' font-family='Arial,sans-serif' font-size='20' font-weight='700' text-anchor='middle' fill='white'%3En%3C/text%3E%3C/svg%3E">
+<meta name="description" content="nue: daily news built around your interests, India first, with a stock watchlist and technical analysis.">
+<meta name="theme-color" content="#12111C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="nue">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400..650&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="style.css">
 <script>
   // Apply a saved theme before first paint to avoid a flash.
@@ -19,39 +24,54 @@
 </head>
 <body>
 
+<div class="net" id="net" hidden role="status">You are offline. Showing the last stories and prices nue saved.</div>
+<div class="ptr" id="ptr" aria-hidden="true"></div>
+
 <header class="top">
   <div class="wrap top-in">
-    <a class="mark" href="#news" aria-label="nue home">nue<i aria-hidden="true"></i></a>
+    <a class="brand" href="#news" aria-label="nue home"><span class="brand-word">nue</span><i class="brand-dot" aria-hidden="true"></i></a>
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="tab-news" aria-controls="panel-news" aria-selected="true">News</button>
       <button class="tab" role="tab" id="tab-stocks" aria-controls="panel-stocks" aria-selected="false" tabindex="-1">Stocks</button>
     </nav>
     <div class="tools">
-      <span class="today" id="today"></span>
-      <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme" title="Switch colour theme">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
-      </button>
+      <button class="pill-btn" id="installBtn" type="button" hidden><span class="ic" data-icon="install"></span>Install app</button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme" title="Switch colour theme"></button>
     </div>
   </div>
 </header>
+
+<section class="hero" aria-label="Today">
+  <div class="wrap hero-in">
+    <p class="hero-kicker" id="heroKicker"></p>
+    <h1 class="hero-title" id="heroTitle">Good morning.</h1>
+    <p class="hero-sub" id="heroSub"></p>
+  </div>
+  <div class="ticker" id="ticker" aria-label="Market snapshot">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+</section>
 
 <main class="wrap">
 
   <!-- NEWS -->
   <section id="panel-news" role="tabpanel" aria-labelledby="tab-news">
     <div class="news-grid">
-      <aside class="side" aria-label="Your interests">
-        <details class="fold" open>
-          <summary>Your interests</summary>
-          <ul class="chips" id="interestList" aria-live="polite"></ul>
-          <form class="add" id="interestForm" autocomplete="off">
-            <label class="sr" for="interestInput">Add an interest</label>
-            <input id="interestInput" type="text" maxlength="60" placeholder="Add a topic, e.g. semiconductors">
-            <button class="btn" type="submit">Add</button>
-          </form>
-          <p class="hint">Suggestions</p>
-          <ul class="chips chips-suggest" id="suggestList"></ul>
-        </details>
+      <aside class="side" id="side" aria-label="Your topics">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <div class="side-head">
+          <h2>Your topics</h2>
+          <button class="icon-btn sheet-close" id="sideClose" type="button" aria-label="Close topics"></button>
+        </div>
+        <p class="hint">Stories are grouped in this order. Tap the arrow to move a topic up.</p>
+        <ul class="chips" id="interestList" aria-live="polite"></ul>
+        <form class="add" id="interestForm" autocomplete="off">
+          <label class="sr" for="interestInput">Add a topic</label>
+          <input id="interestInput" type="text" maxlength="60" placeholder="Add a topic, e.g. semiconductors">
+          <button class="btn" type="submit">Add</button>
+        </form>
+        <p class="hint">Suggestions</p>
+        <ul class="chips chips-suggest" id="suggestList"></ul>
         <div class="controls">
           <label for="regionSel">Edition</label>
           <select id="regionSel">
@@ -76,17 +96,21 @@
             <button type="button" class="seg-btn" id="viewSaved" aria-pressed="false">Saved <span id="savedCount">0</span></button>
           </div>
           <div class="seg" role="group" aria-label="Order">
-            <button type="button" class="seg-btn" id="sortPri" aria-pressed="true" title="Your first interest leads, then the rest in the order you list them">Priority</button>
+            <button type="button" class="seg-btn" id="sortPri" aria-pressed="true" title="Your first topic leads, then the rest in the order you list them">Priority</button>
             <button type="button" class="seg-btn" id="sortNew" aria-pressed="false" title="All stories by time, newest first">Newest</button>
           </div>
-          <label class="sr" for="searchInput">Search headlines</label>
-          <input id="searchInput" class="search" type="search" placeholder="Search headlines" autocomplete="off">
-          <button class="btn btn-ghost" id="refreshBtn" type="button">Refresh</button>
+          <div class="search-wrap">
+            <span class="ic" data-icon="search"></span>
+            <label class="sr" for="searchInput">Search headlines</label>
+            <input id="searchInput" class="search" type="search" placeholder="Search headlines" autocomplete="off">
+          </div>
+          <button class="icon-btn" id="topicsBtn" type="button" aria-label="Edit topics" title="Edit topics"></button>
+          <button class="icon-btn" id="refreshBtn" type="button" aria-label="Refresh news" title="Refresh news"></button>
         </div>
-        <div class="filters" id="topicFilters" role="group" aria-label="Filter by interest"></div>
+        <div class="filters" id="topicFilters" role="group" aria-label="Filter by topic"></div>
         <p class="status" id="newsStatus" role="status" aria-live="polite"></p>
         <ol class="feed" id="feed"></ol>
-        <button class="btn btn-ghost more" id="moreBtn" type="button" hidden>Show more</button>
+        <button class="btn btn-ghost more" id="moreBtn" type="button" hidden>Show more stories</button>
       </section>
     </div>
   </section>
@@ -115,6 +139,7 @@
             <th scope="col" class="num">1D</th>
             <th scope="col" class="num">1M</th>
             <th scope="col" class="num">RSI</th>
+            <th scope="col">Trend</th>
             <th scope="col">Technical read</th>
             <th scope="col"><span class="sr">Remove</span></th>
           </tr>
@@ -131,10 +156,35 @@
 </main>
 
 <footer class="wrap foot">
-  <p>Headlines come from Google News feeds. Prices come from Yahoo Finance. Both are fetched in your browser through public CORS proxies, so they can be slow or unavailable at times. Your interests and watchlist stay in this browser.</p>
+  <p>Headlines come from Google News, with Bing and Yahoo News as backups. Prices come from Yahoo Finance. Both are fetched through nue's own relay. Your topics, saved stories and watchlist stay in this browser.</p>
 </footer>
 
+<!-- phone navigation -->
+<nav class="bnav" id="bnav" aria-label="Main">
+  <button type="button" class="bn" data-go="news" aria-current="page"><span class="ic" data-icon="news"></span><span>News</span></button>
+  <button type="button" class="bn" data-go="stocks"><span class="ic" data-icon="chart"></span><span>Stocks</span></button>
+  <button type="button" class="bn" data-go="saved"><span class="ic" data-icon="bookmark"></span><span>Saved</span><b id="bnSaved" hidden>0</b></button>
+  <button type="button" class="bn" data-go="topics"><span class="ic" data-icon="topics"></span><span>Topics</span></button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="sheet" id="iosSheet" role="dialog" aria-modal="true" aria-labelledby="iosTitle" hidden>
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <h2 id="iosTitle">Install nue on your iPhone</h2>
+  <ol class="ios-steps">
+    <li>Tap the <strong>Share</strong> button in Safari's toolbar.</li>
+    <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+    <li>Tap <strong>Add</strong>. nue opens full screen, like an app.</li>
+  </ol>
+  <button class="btn" id="iosClose" type="button">Got it</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script src="indicators.js"></script>
+<script src="viz.js"></script>
+<script src="ui.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

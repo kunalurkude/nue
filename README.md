@@ -21,6 +21,13 @@ No build step, no backend, no accounts. It is three static files, so it runs on 
 
 The technical read looks at price history only. It ignores earnings, valuation and news, and it is not investment advice.
 
+## Install it as an app
+
+- **Android / desktop Chrome or Edge:** tap the orange **Install app** button in the header (or the browser menu, then Install app).
+- **iPhone / iPad:** open in Safari, tap Share, then **Add to Home Screen**.
+
+On phones nue switches to a bottom tab bar, a slide-up topics sheet, pull to refresh and card-style watchlist rows.
+
 ## Run it
 
 ```sh
@@ -60,6 +67,10 @@ Interests, saved stories, watchlist and theme are stored in your browser's `loca
 | --- | --- |
 | `index.html` | Page structure |
 | `style.css` | Design tokens, light and dark themes, layout |
+| `viz.js` | Generated story art, sparklines, signal gauge, icons (all SVG) |
+| `ui.js` | Toasts, install prompt, service worker, offline banner, pull to refresh |
+| `sw.js` | Service worker: keeps the app shell available offline (bump `VERSION` when shipping changes) |
+| `manifest.webmanifest`, `icons/` | Make nue installable as an app |
 | `app.js` | News and stocks UI, data fetching, chart drawing |
 | `indicators.js` | SMA, EMA, RSI, MACD, volatility, drawdown and the technical read |
 | `worker/worker.js` | Cloudflare Worker relay for news and price data |

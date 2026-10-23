@@ -4,7 +4,10 @@
   'use strict';
 
   var I = window.NueIndicators;
+  var V = window.NueViz;
+  var UI = window.NueUI || { toast: function () {}, buzz: function () {}, setPull: function () {} };
   var root = document.documentElement;
+  var currentTab = 'news';
 
   /* ------------------------------------------------------------------ helpers */
 
@@ -142,7 +145,9 @@
     var t = root.getAttribute('data-theme');
     return t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
-  function themeChanged() { window.dispatchEvent(new Event('nue:theme')); }
+  function themeIcon() { $('#themeBtn').replaceChildren(V.icon(isDark() ? 'sun' : 'moon')); }
+  function themeChanged() { themeIcon(); window.dispatchEvent(new Event('nue:theme')); }
+  themeIcon();
   $('#themeBtn').addEventListener('click', function () {
     var next = isDark() ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
@@ -258,14 +263,28 @@
     if (isSaved(it.link)) N.saved = N.saved.filter(function (s) { return s.link !== it.link; });
     else N.saved.unshift({ title: it.title, link: it.link, source: it.source, ts: it.ts, tags: it.tags || [] });
     LS.set('nue.saved', N.saved.slice(0, 200));
-    $('#savedCount').textContent = N.saved.length;
+    savedUI();
+    UI.buzz(10);
+    UI.toast(isSaved(it.link) ? 'Saved for later' : 'Removed from saved');
     renderFeed();
+  }
+  function savedUI() {
+    $('#savedCount').textContent = N.saved.length;
+    var b = $('#bnSaved');
+    if (b) { b.hidden = !N.saved.length; b.textContent = N.saved.length; }
+  }
+  async function share(it) {
+    try {
+      if (navigator.share) { await navigator.share({ title: it.title, text: it.title, url: it.link }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(it.link); UI.toast('Link copied'); }
+    catch (e) { UI.toast('Could not copy the link'); }
   }
 
   function renderInterests() {
     var list = $('#interestList');
     list.replaceChildren.apply(list, N.interests.map(function (q, i) {
-      return h('li', null, h('span', { class: 'chip' }, q,
+      return h('li', null, h('span', { class: 'chip', style: '--h:' + V.hueFor(q) }, q,
         i > 0 ? h('button', { type: 'button', 'aria-label': 'Move ' + q + ' up in priority', title: 'Higher priority', onclick: function () { moveInterest(i); } }, '↑') : null,
         h('button', { type: 'button', 'aria-label': 'Remove ' + q, onclick: function () { removeInterest(q); } }, '×')));
     }));
@@ -316,27 +335,33 @@
   }
   function filterBtn(val, label, n) {
     return h('button', {
-      type: 'button', class: 'filter', 'aria-pressed': String(N.filter === val),
+      type: 'button', class: 'filter', style: val === 'all' ? null : '--h:' + V.hueFor(val), 'aria-pressed': String(N.filter === val),
       onclick: function () { N.filter = val; N.show = PAGE; renderFeed(); }
-    }, label, h('small', null, n));
+    }, val === 'all' ? null : h('span', { class: 'd' }), label, h('small', null, n));
   }
 
-  function row(it, lead) {
+  function row(it, lead, i) {
+    var hue = V.hueFor((it.tags || [])[0] || '');
     var tags = (it.tags || []).slice(0, 2).map(function (t) { return h('span', { class: 'tag' }, t); });
     var saved = isSaved(it.link);
-    return h('li', { class: 'row' + (lead ? ' lead' : '') },
-      h('div', { class: 'time' }, it.ts ? hhmm(it.ts) : '--:--'),
-      h('div', null,
+    return h('li', { class: 'row' + (lead ? ' lead' : ''), style: '--h:' + hue + ';--i:' + Math.min(i || 0, 12) },
+      h('div', { class: 'c-body' },
+        tags.length ? h('div', { class: 'tags' }, tags) : null,
         h('a', { class: 'hl', href: it.link, target: '_blank', rel: 'noopener noreferrer' }, it.title),
         h('div', { class: 'meta' },
-          it.source ? h('span', null, it.source) : null,
-          it.ts ? h('span', null, ago(it.ts)) : null,
-          tags,
-          h('button', {
-            type: 'button', class: 'save', 'aria-pressed': String(saved),
-            'aria-label': (saved ? 'Remove from saved: ' : 'Save for later: ') + it.title,
-            onclick: function () { toggleSave(it); }
-          }, saved ? 'Saved' : 'Save'))));
+          it.source ? h('span', { class: 'src' }, it.source) : null,
+          it.ts ? h('span', null, ago(it.ts)) : null)),
+      h('div', { class: 'acts' },
+        h('button', {
+          type: 'button', class: 'act save', 'aria-pressed': String(saved), title: saved ? 'Remove from saved' : 'Save for later',
+          'aria-label': (saved ? 'Remove from saved: ' : 'Save for later: ') + it.title,
+          onclick: function () { toggleSave(it); }
+        }, V.icon('bookmark', saved)),
+        h('button', {
+          type: 'button', class: 'act share', title: 'Share', 'aria-label': 'Share: ' + it.title,
+          onclick: function () { share(it); }
+        }, V.icon('share'))),
+      h('div', { class: 'c-art' }, V.art(it.title, hue)));
   }
 
   function renderFeed() {
@@ -369,7 +394,9 @@
     var kids = [];
     if (!list.length) {
       if (N.loading && N.view === 'feed') {
-        for (var s = 0; s < 6; s++) kids.push(h('li', { class: 'row', 'aria-hidden': 'true' }, h('div', { class: 'skel', style: 'width:44px' }), h('div', null, h('div', { class: 'skel', style: 'width:92%;height:18px' }), h('div', { class: 'skel', style: 'width:40%;margin-top:10px' }))));
+        for (var s = 0; s < 6; s++) kids.push(h('li', { class: 'row skeleton', 'aria-hidden': 'true' },
+          h('div', { class: 'c-body' }, h('div', { class: 'skel', style: 'width:28%' }), h('div', { class: 'skel', style: 'width:96%;height:18px' }), h('div', { class: 'skel', style: 'width:68%;height:18px' }), h('div', { class: 'skel', style: 'width:40%' })),
+          h('div', { class: 'c-art skel' })));
       } else if (N.view === 'saved') {
         kids.push(h('li', { class: 'empty' }, h('strong', null, 'Nothing saved yet'), 'Tap Save on any story to keep it here.'));
       } else if (!N.interests.length) {
@@ -387,18 +414,50 @@
     }
 
     var shown = list.slice(0, N.show);
+    function groupOf(it) { return prio ? (N.interests[rankOf(it)] || 'Other') : (it.ts ? dayLabel(it.ts) : 'Earlier'); }
+    var counts = {};
+    list.forEach(function (it) { var g = groupOf(it); counts[g] = (counts[g] || 0) + 1; });
     var lastDay = '';
     shown.forEach(function (it, i) {
-      var d = prio ? (N.interests[rankOf(it)] || 'Other') : (it.ts ? dayLabel(it.ts) : 'Earlier');
-      if (d !== lastDay) { kids.push(h('li', { class: 'day', role: 'presentation' }, d)); lastDay = d; }
-      kids.push(row(it, i === 0 && N.view === 'feed' && !N.q));
+      var d = groupOf(it);
+      if (d !== lastDay) {
+        kids.push(h('li', { class: 'day', role: 'presentation', style: prio ? '--h:' + V.hueFor(d) : null },
+          prio ? h('span', { class: 'd' }) : null,
+          h('span', { class: 'name' }, d),
+          h('span', { class: 'n' }, counts[d]),
+          prio && d === N.interests[0] ? h('span', { class: 'badge' }, 'Top priority') : null));
+        lastDay = d;
+      }
+      kids.push(row(it, i === 0 && N.view === 'feed' && !N.q, i));
     });
     feed.replaceChildren.apply(feed, kids);
     $('#moreBtn').hidden = list.length <= N.show;
   }
 
+  function greeting() {
+    var hr = new Date().getHours();
+    return hr < 5 ? 'Late night' : hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  }
+  function renderHero() {
+    var kick = $('#heroKicker'), title = $('#heroTitle'), sub = $('#heroSub');
+    if (!title) return;
+    var date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    title.replaceChildren(greeting(), h('span', { class: 'dot' }, '.'));
+    if (currentTab === 'stocks') {
+      kick.textContent = date + ' · Markets';
+      sub.textContent = (S.updated ? 'Prices updated ' + hhmm(S.updated) + '. ' : '') + 'Technical reads use price history only.';
+    } else {
+      var ed = { IN: 'India', US: 'United States', GB: 'United Kingdom', AU: 'Australia' }[N.region];
+      var total = merged().length;
+      kick.textContent = date + ' · ' + ed + ' edition';
+      sub.textContent = N.loading && !total ? 'Gathering your stories…'
+        : total + ' stories across ' + N.interests.length + ' topic' + (N.interests.length === 1 ? '' : 's') + (N.updated ? ' · updated ' + hhmm(N.updated) : '') + '.';
+    }
+  }
+
   function renderNewsStatus(total) {
     var el = $('#newsStatus');
+    renderHero();
     el.replaceChildren();
     if (N.view === 'saved') return;
     if (N.loading) { el.textContent = 'Loading stories for ' + N.interests.length + ' interest' + (N.interests.length === 1 ? '' : 's') + '…'; return; }
@@ -417,6 +476,7 @@
     N.loading = true;
     N.errors = {};
     $('#refreshBtn').disabled = true;
+    $('#refreshBtn').classList.add('spinning');
     renderFeed();
     var win = N.win, region = N.region;
     await pool(N.interests.slice(), 3, async function (q) {
@@ -432,6 +492,7 @@
     N.loading = false;
     N.updated = Date.now();
     $('#refreshBtn').disabled = false;
+    $('#refreshBtn').classList.remove('spinning');
     renderFeed();
   }
 
@@ -440,7 +501,7 @@
     N.started = true;
     $('#regionSel').value = N.region;
     $('#winSel').value = N.win;
-    $('#savedCount').textContent = N.saved.length;
+    savedUI();
     $('#sortPri').setAttribute('aria-pressed', String(N.sort === 'priority'));
     $('#sortNew').setAttribute('aria-pressed', String(N.sort === 'newest'));
     renderInterests();
@@ -468,6 +529,7 @@
     $('#viewFeed').setAttribute('aria-pressed', String(v === 'feed'));
     $('#viewSaved').setAttribute('aria-pressed', String(v === 'saved'));
     renderFeed();
+    updateNav();
   }
   function setSort(s) {
     N.sort = s; N.show = PAGE; LS.set('nue.sort', s);
@@ -484,6 +546,7 @@
 
   var DEFAULT_WATCH = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'AAPL'];
   var INDEXES = [['^NSEI', 'Nifty 50'], ['^BSESN', 'Sensex'], ['^GSPC', 'S&P 500'], ['^IXIC', 'Nasdaq']];
+  var TICKER = INDEXES.concat([['^NSEBANK', 'Bank Nifty'], ['INR=X', 'USD/INR']]);
   var MAX_WATCH = 15;
 
   var S = {
@@ -595,6 +658,7 @@
     if (bad.length) kids.push(h('span', { class: 'err' }, bad.length + ' symbol' + (bad.length === 1 ? '' : 's') + ' could not load. '));
     kids.push(h('button', { type: 'button', onclick: function () { loadAll(true); loadIndexes(true); } }, 'Refresh prices'));
     el.append.apply(el, kids);
+    if (currentTab === 'stocks') renderHero();
   }
 
   // previous-close logic shared by the strip and the table
@@ -606,61 +670,94 @@
     return { price: price, prev: prev, pct: prev ? price / prev - 1 : null, chg: price - prev };
   }
 
-  async function loadIndexes(force) {
-    await pool(INDEXES, 4, async function (pair) {
+  function loadIndexes(force) {
+    if (S.idxP && !force) return S.idxP;
+    S.idxP = pool(TICKER, 4, async function (pair) {
       var sym = pair[0];
       try {
-        var res = await fetchChart(sym, '5d', force);
-        S.idx[sym] = { q: quoteOf(res.bars, res.meta.price), cur: res.meta.currency };
+        var res = await fetchChart(sym, '1mo', force);
+        S.idx[sym] = { q: quoteOf(res.bars, res.meta.price), cur: res.meta.currency, closes: res.bars.c };
       } catch (e) { S.idx[sym] = { err: true }; }
       renderMarket();
+      renderTicker();
     });
+    return S.idxP;
+  }
+
+  function sparkOf(closes, t, w, hgt) {
+    var sv = V.spark(closes.slice(-22), { w: w, h: hgt, label: 'Last month' });
+    sv.setAttribute('class', 'spark ' + t);
+    return sv;
   }
 
   function renderMarket() {
     var box = $('#marketStrip');
     box.replaceChildren.apply(box, INDEXES.map(function (pair) {
       var d = S.idx[pair[0]];
-      var inner;
-      if (!d) inner = [h('div', { class: 'skel', style: 'width:70%;height:24px;margin-top:6px' }), h('div', { class: 'skel', style: 'width:40%;margin-top:8px' })];
-      else if (d.err) inner = [h('div', { class: 'val flat' }, '–'), h('div', { class: 'chg flat' }, 'Unavailable')];
-      else inner = [
+      if (!d) return h('div', { class: 'idx' }, h('div', { class: 'nm' }, pair[1]), h('div', { class: 'skel', style: 'width:70%;height:24px;margin-top:8px' }), h('div', { class: 'skel', style: 'width:40%;margin-top:8px' }));
+      if (d.err) return h('div', { class: 'idx' }, h('div', { class: 'nm' }, pair[1]), h('div', { class: 'val flat' }, '–'), h('div', { class: 'chg flat' }, 'Unavailable'));
+      var t = tone(d.q.pct);
+      return h('div', { class: 'idx ' + t },
+        h('div', { class: 'nm' }, pair[1]),
         h('div', { class: 'val' }, fmtNum(d.q.price, d.cur)),
-        h('div', { class: 'chg ' + tone(d.q.pct) }, fmtPct(d.q.pct) + '  (' + (d.q.chg >= 0 ? '+' : '−') + fmtNum(Math.abs(d.q.chg), d.cur) + ')')
-      ];
-      return h('div', { class: 'idx' }, h('div', { class: 'nm' }, pair[1]), inner);
+        h('div', { class: 'chg ' + t }, fmtPct(d.q.pct) + '  (' + (d.q.chg >= 0 ? '+' : '−') + fmtNum(Math.abs(d.q.chg), d.cur) + ')'),
+        sparkOf(d.closes, t, 72, 34));
     }));
+  }
+
+  function renderTicker() {
+    var track = $('#tickerTrack');
+    if (!track) return;
+    var have = TICKER.filter(function (p) { return S.idx[p[0]] && !S.idx[p[0]].err; });
+    if (!have.length) {
+      var settled = TICKER.every(function (p) { return S.idx[p[0]]; });
+      track.style.animation = 'none';
+      track.replaceChildren(h('span', { class: 'tk-empty' }, settled ? 'Market snapshot unavailable right now.' : 'Loading markets…'));
+      return;
+    }
+    track.style.animation = '';
+    function set(hidden) {
+      return have.map(function (p) {
+        var d = S.idx[p[0]], t = tone(d.q.pct);
+        var el = h('span', { class: 'tk' }, h('span', { class: 'tk-name' }, p[1]), h('span', { class: 'tk-val' }, fmtNum(d.q.price, d.cur)),
+          h('span', { class: 'tk-chg ' + t }, (t === 'up' ? '▲ ' : t === 'down' ? '▼ ' : '') + fmtPct(d.q.pct)));
+        if (hidden) el.setAttribute('aria-hidden', 'true');
+        return el;
+      });
+    }
+    track.replaceChildren.apply(track, set(false).concat(set(true), set(true), set(true)));
   }
 
   function renderTable() {
     var body = $('#watchBody');
     if (!S.watch.length) {
-      body.replaceChildren(h('tr', null, h('td', { colspan: '7', class: 'empty' }, 'Your watchlist is empty. Add a symbol above to start.')));
+      body.replaceChildren(h('tr', null, h('td', { colspan: '8', class: 'empty' }, 'Your watchlist is empty. Add a symbol above to start.')));
       return;
     }
     body.replaceChildren.apply(body, S.watch.map(function (sym) {
       var d = S.data[sym];
       var selected = S.sel === sym;
       var tr = h('tr', { 'aria-selected': String(selected), onclick: function () { select(sym); } });
-      var symCell = h('td', null,
-        h('button', { type: 'button', class: 'sym', style: 'appearance:none;background:none;border:0;color:inherit;padding:0;cursor:pointer;', onclick: function (e) { e.stopPropagation(); select(sym); } }, sym),
-        d && d.meta ? h('span', { class: 'sym-name' }, d.meta.name) : null);
-      var rm = h('td', null, h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + sym, onclick: function (e) { e.stopPropagation(); removeSymbol(sym); } }, '×'));
-      tr.append(symCell);
+      tr.append(h('td', { class: 'c-sym' },
+        h('button', { type: 'button', class: 'sym', onclick: function (e) { e.stopPropagation(); select(sym); } }, sym),
+        d && d.meta ? h('span', { class: 'sym-name' }, d.meta.name) : null));
       if (!d || d.loading) {
-        for (var i = 0; i < 5; i++) tr.append(h('td', { 'aria-hidden': 'true' }, h('div', { class: 'skel', style: 'width:' + (i === 4 ? 90 : 56) + 'px' })));
+        ['c-price', 'c-d1', 'c-m1', 'c-rsi', 'c-spark', 'c-read'].forEach(function (c, i) {
+          tr.append(h('td', { class: c, 'aria-hidden': 'true' }, h('div', { class: 'skel', style: 'width:' + (i === 5 ? 90 : 56) + 'px' })));
+        });
       } else if (d.err) {
-        tr.append(h('td', { colspan: '5' }, h('span', { class: 'row-err' }, d.err + ' '), h('button', { type: 'button', class: 'btn btn-ghost', style: 'padding:2px 8px;font-size:12px', onclick: function (e) { e.stopPropagation(); loadSymbol(sym, true); } }, 'Retry')));
+        tr.append(h('td', { colspan: '6', class: 'c-wide' }, h('span', { class: 'row-err' }, d.err + ' '), h('button', { type: 'button', class: 'btn btn-ghost', style: 'padding:2px 8px;font-size:12px', onclick: function (e) { e.stopPropagation(); loadSymbol(sym, true); } }, 'Retry')));
       } else {
         var a = d.a, isIdx = d.meta.type === 'INDEX';
         tr.append(
-          h('td', { class: 'num' }, fmtPrice(a.price, d.meta.currency, isIdx)),
-          h('td', { class: 'num ' + tone(a.chgPct) }, fmtPct(a.chgPct)),
-          h('td', { class: 'num ' + tone(a.ret.m1) }, fmtPct(a.ret.m1, 1)),
-          h('td', { class: 'num' }, a.rsi == null ? '–' : a.rsi.toFixed(0)),
-          h('td', null, h('span', { class: 'pill ' + a.tone }, a.label)));
+          h('td', { class: 'num c-price' }, fmtPrice(a.price, d.meta.currency, isIdx)),
+          h('td', { class: 'num c-d1 ' + tone(a.chgPct) }, fmtPct(a.chgPct)),
+          h('td', { class: 'num c-m1 ' + tone(a.ret.m1), 'data-l': '1 MONTH' }, fmtPct(a.ret.m1, 1)),
+          h('td', { class: 'num c-rsi', 'data-l': 'RSI' }, a.rsi == null ? '–' : a.rsi.toFixed(0)),
+          h('td', { class: 'c-spark' }, sparkOf(d.bars.c, a.tone, 96, 30)),
+          h('td', { class: 'c-read' }, h('span', { class: 'pill ' + a.tone }, a.label)));
       }
-      tr.append(rm);
+      tr.append(h('td', { class: 'c-x' }, h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + sym, onclick: function (e) { e.stopPropagation(); removeSymbol(sym); } }, '×')));
       return tr;
     }));
   }
@@ -751,12 +848,6 @@
       metric('20-day low / high', fmtNum(a.support, cur) + ' / ' + fmtNum(a.resistance, cur), 'Nearby support and resistance'),
       metric('Volatility (annualised)', a.vol == null ? '–' : (a.vol * 100).toFixed(1) + '%', 'Worst drop in the last year ' + fmtPct(a.mdd, 1)));
 
-    var n = a.factors.length;
-    var meter = h('div', { class: 'meter', 'aria-hidden': 'true' });
-    var onCount = Math.round(Math.abs(a.norm) * n);
-    for (var i = 0; i < n; i++) {
-      meter.append(h('i', { class: i < onCount ? 'on-' + a.tone : '' }));
-    }
     var factors = h('ul', { class: 'factors' }, a.factors.map(function (f) {
       var t = f.score > 0 ? 'up' : f.score < 0 ? 'down' : 'flat';
       return h('li', null,
@@ -765,7 +856,7 @@
     }));
 
     var read = h('div', { class: 'read' },
-      h('div', null, h('h3', null, 'Technical read'), h('div', { class: 'verdict ' + a.tone }, a.label), meter,
+      h('div', { class: 'verdict-box' }, h('h3', null, 'Technical read'), V.gauge(a.norm), h('div', { class: 'verdict ' + a.tone }, a.label),
         h('p', { class: 'hint' }, a.factors.filter(function (f) { return f.score > 0; }).length + ' bullish, ' + a.factors.filter(function (f) { return f.score < 0; }).length + ' bearish, ' + a.factors.filter(function (f) { return f.score === 0; }).length + ' neutral signals')),
       factors);
 
@@ -929,6 +1020,7 @@
     renderMarket();
     renderTable();
     renderStockStatus();
+    renderTicker();
     loadIndexes(false);
     loadAll(false);
   }
@@ -938,6 +1030,8 @@
   var TABS = ['news', 'stocks'];
   function showTab(name, focus) {
     if (TABS.indexOf(name) < 0) name = 'news';
+    currentTab = name;
+    closeSheet();
     TABS.forEach(function (t) {
       var on = t === name;
       $('#panel-' + t).hidden = !on;
@@ -949,7 +1043,54 @@
     try { history.replaceState(null, '', '#' + name); } catch (e) { /* ignore */ }
     LS.set('nue.tab', name);
     if (name === 'news') initNews(); else initStocks();
+    renderHero();
+    updateNav();
   }
+
+  /* topics sheet (phones) and bottom navigation */
+  function openSheet() {
+    $('#side').classList.add('open');
+    $('#scrim').classList.add('on');
+    updateNav();
+  }
+  function closeSheet() {
+    var side = $('#side');
+    if (!side.classList.contains('open')) return;
+    side.classList.remove('open');
+    $('#scrim').classList.remove('on');
+    updateNav();
+  }
+  function updateNav() {
+    var sheetOpen = $('#side').classList.contains('open');
+    var cur = sheetOpen ? 'topics' : currentTab === 'stocks' ? 'stocks' : N.view === 'saved' ? 'saved' : 'news';
+    document.querySelectorAll('.bn').forEach(function (b) {
+      if (b.getAttribute('data-go') === cur) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+  }
+  function toTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  document.querySelectorAll('.bn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var go = b.getAttribute('data-go');
+      UI.buzz(8);
+      if (go === 'topics') { showTab('news'); openSheet(); return; }
+      if (go === 'saved') { showTab('news'); setView('saved'); toTop(); return; }
+      if (go === 'stocks') { showTab('stocks'); toTop(); return; }
+      showTab('news'); setView('feed'); toTop();
+    });
+  });
+  $('#topicsBtn').addEventListener('click', openSheet);
+  $('#sideClose').addEventListener('click', closeSheet);
+  $('#scrim').addEventListener('click', function () {
+    closeSheet();
+    var ios = $('#iosSheet');
+    if (ios) ios.hidden = true;
+    $('#scrim').classList.remove('on');
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+  window.addEventListener('resize', function () { if (window.innerWidth >= 980) closeSheet(); });
+  UI.setPull(function () {
+    return currentTab === 'stocks' ? Promise.all([loadAll(true), loadIndexes(true)]) : refreshNews(true);
+  });
   TABS.forEach(function (t) {
     $('#tab-' + t).addEventListener('click', function () { showTab(t); });
     $('#tab-' + t).addEventListener('keydown', function (e) {
@@ -965,8 +1106,9 @@
     if (TABS.indexOf(name) >= 0) showTab(name);
   });
 
-  $('#today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   pruneCache();
   var start = location.hash.replace('#', '');
   showTab(TABS.indexOf(start) >= 0 ? start : LS.get('nue.tab', 'news'));
+  renderTicker();
+  loadIndexes(false); // the ticker under the masthead is visible on both tabs
 })();
