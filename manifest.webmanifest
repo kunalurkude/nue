@@ -1,7 +1,7 @@
 {
   "name": "nue",
   "short_name": "nue",
-  "description": "Daily news built around your interests, India first, with a stock watchlist and technical analysis.",
+  "description": "Personalised news with India first, plus a stock watchlist with technical analysis. Free and works offline.",
   "id": "./",
   "start_url": "./#news",
   "scope": "./",
@@ -9,15 +9,55 @@
   "orientation": "portrait",
   "background_color": "#12111C",
   "theme_color": "#12111C",
-  "categories": ["news", "finance"],
+  "categories": [
+    "news",
+    "finance"
+  ],
   "lang": "en-IN",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "News", "short_name": "News", "url": "./#news", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Stocks", "short_name": "Stocks", "url": "./#stocks", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+    {
+      "name": "News",
+      "short_name": "News",
+      "url": "./#news",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Stocks",
+      "short_name": "Stocks",
+      "url": "./#stocks",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

@@ -1,6 +1,6 @@
 /* nue service worker: keeps the app shell available offline.
    News and prices are not cached here. The app keeps its own copy of the latest stories. */
-var VERSION = 'nue-v2';
+var VERSION = 'nue-v3';
 var SHELL = [
   './',
   'index.html',

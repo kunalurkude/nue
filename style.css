@@ -606,3 +606,12 @@ input.search { padding-left: 40px; border-radius: 999px; }
   .skel { animation: none; }
   * { transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* about block (also gives search engines readable text) */
+.about { padding-block: 8px 34px; }
+.about h2 { font: 750 22px var(--f-ui); letter-spacing: -0.015em; margin-bottom: 14px; }
+.about-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.about h3 { font: 700 15px var(--f-ui); margin-bottom: 6px; }
+.about p { font-size: 14px; color: var(--ink-2); }
+.about a { color: var(--accent-text); font-weight: 600; }
+@media (max-width: 760px) { .about { padding-bottom: 8px; } .about-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }

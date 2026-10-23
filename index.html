@@ -3,8 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>nue</title>
-<meta name="description" content="nue: daily news built around your interests, India first, with a stock watchlist and technical analysis.">
+<title>nue: personalised news app for India with stock analysis</title>
+<meta name="description" content="nue is a free news app that follows your interests, with India stories first. Add a stock watchlist with RSI, MACD and trend analysis for NSE, BSE and US shares. Installs on phones, tablets and desktop.">
+<meta name="keywords" content="nue, nue app, personalised news, India news app, daily news by interest, stock analysis, NSE BSE watchlist, Nifty Sensex, technical analysis, RSI MACD, installable web app, PWA">
+<meta name="author" content="Kunal Urkude">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<link rel="canonical" href="https://kunalurkude.github.io/nue/">
+<meta name="application-name" content="nue">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nue">
+<meta property="og:locale" content="en_IN">
+<meta property="og:title" content="nue: personalised news app for India with stock analysis">
+<meta property="og:description" content="News that follows your interests, India first, plus a stock watchlist with technical analysis. Free, installable, works offline.">
+<meta property="og:url" content="https://kunalurkude.github.io/nue/">
+<meta property="og:image" content="https://kunalurkude.github.io/nue/icons/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="nue: news that follows your interests, India first, with stock analysis">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="nue: personalised news app for India with stock analysis">
+<meta name="twitter:description" content="News that follows your interests, India first, plus a stock watchlist with technical analysis.">
+<meta name="twitter:image" content="https://kunalurkude.github.io/nue/icons/og-image.png">
+<link rel="sitemap" type="application/xml" href="sitemap.xml">
 <meta name="theme-color" content="#12111C">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
@@ -17,6 +37,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebSite", "@id": "https://kunalurkude.github.io/nue/#site", "url": "https://kunalurkude.github.io/nue/", "name": "nue", "inLanguage": "en-IN", "description": "Personalised news with India first, plus stock analysis."}, {"@type": "WebApplication", "@id": "https://kunalurkude.github.io/nue/#app", "name": "nue", "url": "https://kunalurkude.github.io/nue/", "applicationCategory": "NewsApplication", "operatingSystem": "Any (Android, iOS, Windows, macOS, Linux)", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"}, "author": {"@type": "Person", "name": "Kunal Urkude", "url": "https://github.com/kunalurkude"}, "image": "https://kunalurkude.github.io/nue/icons/og-image.png", "featureList": ["News grouped by your interests with India first", "Stock watchlist for NSE, BSE and US shares", "RSI, MACD, moving average and trend analysis", "Installs on phones, tablets and desktop", "Works offline"]}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "How do I install nue on my phone or tablet?", "acceptedAnswer": {"@type": "Answer", "text": "On Android, open nue in Chrome and tap Install app. On iPhone and iPad, open nue in Safari, tap Share, then Add to Home Screen."}}, {"@type": "Question", "name": "Is nue free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. nue is free, needs no account and keeps your topics and watchlist on your own device."}}, {"@type": "Question", "name": "Where do the news and prices come from?", "acceptedAnswer": {"@type": "Answer", "text": "Headlines come from Google News with Bing and Yahoo News as backups. Prices come from Yahoo Finance."}}, {"@type": "Question", "name": "Is the stock analysis investment advice?", "acceptedAnswer": {"@type": "Answer", "text": "No. The technical read uses price history only and is for information, not investment advice."}}]}]}</script>
 <script>
   // Apply a saved theme before first paint to avoid a flash.
   try { var t = JSON.parse(localStorage.getItem('nue.theme')); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -24,6 +45,7 @@
 </head>
 <body>
 
+<noscript><p style="padding:16px;font:16px system-ui;background:#fff3cd;color:#222">nue needs JavaScript to load your news and prices. Please enable it in your browser.</p></noscript>
 <div class="net" id="net" hidden role="status">You are offline. Showing the last stories and prices nue saved.</div>
 <div class="ptr" id="ptr" aria-hidden="true"></div>
 
@@ -45,7 +67,8 @@
 <section class="hero" aria-label="Today">
   <div class="wrap hero-in">
     <p class="hero-kicker" id="heroKicker"></p>
-    <h1 class="hero-title" id="heroTitle">Good morning.</h1>
+    <h1 class="sr">nue: personalised news app for India with stock analysis</h1>
+    <p class="hero-title" id="heroTitle">Good morning.</p>
     <p class="hero-sub" id="heroSub"></p>
   </div>
   <div class="ticker" id="ticker" aria-label="Market snapshot">
@@ -217,6 +240,15 @@
 
 </main>
 
+
+<section class="wrap about" aria-labelledby="aboutH">
+  <h2 id="aboutH">About nue</h2>
+  <div class="about-grid">
+    <div><h3>News by your interests</h3><p>Pick topics such as India, technology, cricket or the stock market. nue gathers headlines from Google News, Bing and Yahoo News, removes duplicates and shows your first topic, India by default, at the top.</p></div>
+    <div><h3>Stock analysis for NSE, BSE and US shares</h3><p>Build a watchlist and see price, trend, RSI, MACD, moving averages, support and resistance, and a plain-language technical read for each stock.</p></div>
+    <div><h3>An app without the app store</h3><p>Install nue on Android, iPhone, iPad, Windows or Mac from your browser. It opens full screen and keeps your latest stories available offline. <a href="#install">See how to install</a>.</p></div>
+  </div>
+</section>
 <footer class="wrap foot">
   <nav class="foot-links" aria-label="Footer"><a href="#news">News</a><a href="#stocks">Stocks</a><a href="#install">Get the app</a><a href="https://github.com/kunalurkude/nue" target="_blank" rel="noopener noreferrer">Source on GitHub</a></nav>
   <p>Headlines come from Google News, with Bing and Yahoo News as backups. Prices come from Yahoo Finance. Both are fetched through nue's own relay. Your topics, saved stories and watchlist stay in this browser.</p>
