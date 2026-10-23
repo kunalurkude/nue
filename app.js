@@ -170,6 +170,7 @@
     region: LS.get('nue.region', 'IN'),
     win: LS.get('nue.win', '1d'),
     saved: LS.get('nue.saved', []),
+    sort: LS.get('nue.sort', 'priority') === 'newest' ? 'newest' : 'priority',
     topic: {},       // interest -> items for the current edition and window
     errors: {},
     filter: 'all',
@@ -263,8 +264,9 @@
 
   function renderInterests() {
     var list = $('#interestList');
-    list.replaceChildren.apply(list, N.interests.map(function (q) {
+    list.replaceChildren.apply(list, N.interests.map(function (q, i) {
       return h('li', null, h('span', { class: 'chip' }, q,
+        i > 0 ? h('button', { type: 'button', 'aria-label': 'Move ' + q + ' up in priority', title: 'Higher priority', onclick: function () { moveInterest(i); } }, '↑') : null,
         h('button', { type: 'button', 'aria-label': 'Remove ' + q, onclick: function () { removeInterest(q); } }, '×')));
     }));
     var sug = $('#suggestList');
@@ -286,6 +288,13 @@
     LS.set('nue.interests', N.interests);
     renderInterests();
     refreshNews(false);
+  }
+  function moveInterest(i) {
+    if (i < 1 || i >= N.interests.length) return;
+    var t = N.interests[i - 1]; N.interests[i - 1] = N.interests[i]; N.interests[i] = t;
+    LS.set('nue.interests', N.interests);
+    renderInterests();
+    renderFeed();
   }
   function removeInterest(q) {
     N.interests = N.interests.filter(function (x) { return x !== q; });
@@ -346,6 +355,17 @@
     }
     renderNewsStatus(all.length);
 
+    // Priority order: your first interest (India) leads, then the rest in the order you list them.
+    var prio = N.view === 'feed' && N.sort === 'priority' && N.filter === 'all';
+    function rankOf(it) {
+      var r = 99;
+      (it.tags || []).forEach(function (t) { var k = N.interests.indexOf(t); if (k >= 0 && k < r) r = k; });
+      return r;
+    }
+    if (prio) {
+      list = list.slice().sort(function (a, b) { return rankOf(a) - rankOf(b) || b.ts - a.ts; });
+    }
+
     var kids = [];
     if (!list.length) {
       if (N.loading && N.view === 'feed') {
@@ -369,7 +389,7 @@
     var shown = list.slice(0, N.show);
     var lastDay = '';
     shown.forEach(function (it, i) {
-      var d = it.ts ? dayLabel(it.ts) : 'Earlier';
+      var d = prio ? (N.interests[rankOf(it)] || 'Other') : (it.ts ? dayLabel(it.ts) : 'Earlier');
       if (d !== lastDay) { kids.push(h('li', { class: 'day', role: 'presentation' }, d)); lastDay = d; }
       kids.push(row(it, i === 0 && N.view === 'feed' && !N.q));
     });
@@ -421,6 +441,8 @@
     $('#regionSel').value = N.region;
     $('#winSel').value = N.win;
     $('#savedCount').textContent = N.saved.length;
+    $('#sortPri').setAttribute('aria-pressed', String(N.sort === 'priority'));
+    $('#sortNew').setAttribute('aria-pressed', String(N.sort === 'newest'));
     renderInterests();
     renderFeed();
     refreshNews(false);
@@ -447,6 +469,14 @@
     $('#viewSaved').setAttribute('aria-pressed', String(v === 'saved'));
     renderFeed();
   }
+  function setSort(s) {
+    N.sort = s; N.show = PAGE; LS.set('nue.sort', s);
+    $('#sortPri').setAttribute('aria-pressed', String(s === 'priority'));
+    $('#sortNew').setAttribute('aria-pressed', String(s === 'newest'));
+    renderFeed();
+  }
+  $('#sortPri').addEventListener('click', function () { setSort('priority'); });
+  $('#sortNew').addEventListener('click', function () { setSort('newest'); });
   $('#viewFeed').addEventListener('click', function () { setView('feed'); });
   $('#viewSaved').addEventListener('click', function () { setView('saved'); });
 

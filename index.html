@@ -75,6 +75,10 @@
             <button type="button" class="seg-btn" id="viewFeed" aria-pressed="true">For you</button>
             <button type="button" class="seg-btn" id="viewSaved" aria-pressed="false">Saved <span id="savedCount">0</span></button>
           </div>
+          <div class="seg" role="group" aria-label="Order">
+            <button type="button" class="seg-btn" id="sortPri" aria-pressed="true" title="Your first interest leads, then the rest in the order you list them">Priority</button>
+            <button type="button" class="seg-btn" id="sortNew" aria-pressed="false" title="All stories by time, newest first">Newest</button>
+          </div>
           <label class="sr" for="searchInput">Search headlines</label>
           <input id="searchInput" class="search" type="search" placeholder="Search headlines" autocomplete="off">
           <button class="btn btn-ghost" id="refreshBtn" type="button">Refresh</button>
