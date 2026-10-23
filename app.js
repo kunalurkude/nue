@@ -186,6 +186,19 @@
 
   function norm(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 70); }
 
+  // Bing wraps article links in a redirect (bing.com/news/apiclick...?url=<real address>). Use the real one.
+  function realLink(href) {
+    try {
+      var u = new URL(href);
+      if (/(^|\.)bing\.com$/.test(u.hostname)) {
+        var real = u.searchParams.get('url');
+        if (real && /^https?:\/\//i.test(real)) return real;
+      }
+    } catch (e) { /* keep the original */ }
+    return href;
+  }
+  var WINDOW_MS = { '1d': 864e5, '3d': 3 * 864e5, '7d': 7 * 864e5 };
+
   function parseRss(xml) {
     var doc = new DOMParser().parseFromString(xml, 'text/xml');
     if (doc.querySelector('parsererror')) throw new Error('The news feed could not be read.');
@@ -193,9 +206,11 @@
     doc.querySelectorAll('item').forEach(function (it) {
       function tx(sel) { var e = it.querySelector(sel); return e ? e.textContent.trim() : ''; }
       var title = tx('title');
-      var src = tx('source');
+      // Google News uses <source>; Bing News (the relay's fallback) uses <News:Source>.
+      var bingSrc = it.getElementsByTagName('News:Source')[0];
+      var src = tx('source') || (bingSrc ? bingSrc.textContent.trim() : '');
       if (src && title.slice(-(src.length + 3)) === ' - ' + src) title = title.slice(0, -(src.length + 3));
-      var link = tx('link');
+      var link = realLink(tx('link'));
       var ts = Date.parse(tx('pubDate')) || 0;
       if (title && link) out.push({ title: title, link: link, source: src, ts: ts });
     });
@@ -214,7 +229,8 @@
       '&hl=' + r.hl + '&gl=' + r.gl + '&ceid=' + encodeURIComponent(r.ceid);
     try {
       var xml = await viaProxy(url, function (t) { return /<rss[\s>]/.test(t); });
-      var items = parseRss(xml).slice(0, 20);
+      var cutoff = Date.now() - (WINDOW_MS[win] || WINDOW_MS['7d']) - 36e5;
+      var items = parseRss(xml).filter(function (it) { return !it.ts || it.ts >= cutoff; }).slice(0, 20);
       LS.set(key, { t: Date.now(), items: items });
       return items;
     } catch (e) {

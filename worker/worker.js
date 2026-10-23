@@ -1,6 +1,7 @@
 // nue relay: a tiny Cloudflare Worker that fetches Google News and Yahoo Finance data
 // for the nue web app. Browsers cannot fetch those sites directly, so the app asks this
-// Worker instead. It only fetches the two allowed sources and only answers nue's own site.
+// Worker instead. It only fetches Google News search feeds (with Bing News as a fallback when
+// Google refuses) and Yahoo Finance chart data, and only answers nue's own site.
 //
 // Usage: GET https://<your-worker>.workers.dev/?url=<encoded source url>
 
@@ -17,6 +18,32 @@ function allowedSource(u) {
     return u.pathname.startsWith('/v8/finance/chart/');
   }
   return false;
+}
+
+// Fetch one URL. For news feeds, a 200 that is not RSS (a block page) counts as a failure.
+async function getFrom(url, expectRss) {
+  try {
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; nue-relay/1.0)',
+        'Accept': 'application/rss+xml, application/xml, application/json, */*'
+      }
+    });
+    const type = r.headers.get('Content-Type') || 'text/plain';
+    const body = await r.text();
+    const ok = r.ok && (!expectRss || /<rss[\s>]/.test(body));
+    return { ok: ok, status: r.ok && !ok ? 503 : r.status, type: type, body: body, from: new URL(url).hostname };
+  } catch (e) {
+    return { ok: false, error: true, status: 502, type: 'text/plain', body: '' };
+  }
+}
+
+// Build the Bing News RSS search that matches a Google News RSS search.
+function bingUrl(g) {
+  const q = (g.searchParams.get('q') || '').replace(/\s+when:\w+\s*$/i, '').trim();
+  if (!q) return null;
+  const mkt = g.searchParams.get('hl') || 'en-US';
+  return 'https://www.bing.com/news/search?q=' + encodeURIComponent(q) + '&format=rss&setmkt=' + encodeURIComponent(mkt);
 }
 
 export default {
@@ -46,26 +73,23 @@ export default {
     const cacheKey = new Request(target.toString(), { method: 'GET' });
     let res = await cache.match(cacheKey);
     if (!res) {
-      let upstream;
-      try {
-        upstream = await fetch(target.toString(), {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; nue-relay/1.0)',
-            'Accept': 'application/rss+xml, application/xml, application/json, */*'
-          },
-          cf: { cacheTtl: 600, cacheEverything: true }
-        });
-      } catch (e) {
-        return new Response('Could not reach the source', { status: 502, headers: cors });
+      let got = await getFrom(target.toString(), target.hostname === 'news.google.com');
+      // Google News often refuses requests from shared cloud addresses ("automated queries").
+      // When that happens, ask Bing News for the same search instead.
+      if (!got.ok && target.hostname === 'news.google.com') {
+        const alt = bingUrl(target);
+        if (alt) { const b = await getFrom(alt, true); if (b.ok) got = b; }
       }
-      res = new Response(upstream.body, {
-        status: upstream.status,
+      if (got.error) return new Response('Could not reach the source', { status: 502, headers: cors });
+      res = new Response(got.body, {
+        status: got.ok ? 200 : got.status,
         headers: {
-          'Content-Type': upstream.headers.get('Content-Type') || 'text/plain',
-          'Cache-Control': upstream.ok ? 'public, max-age=600' : 'no-store'
+          'Content-Type': got.type,
+          'Cache-Control': got.ok ? 'public, max-age=600' : 'no-store',
+          'X-Nue-Source': got.from || 'origin'
         }
       });
-      if (upstream.ok) ctx.waitUntil(cache.put(cacheKey, res.clone()));
+      if (got.ok) ctx.waitUntil(cache.put(cacheKey, res.clone()));
     }
 
     const out = new Response(res.body, res);
