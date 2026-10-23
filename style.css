@@ -457,8 +457,43 @@ input.search { padding-left: 40px; border-radius: 999px; }
 
 .bnav { display: none; }
 
+/* ------------------------------------------------------------ install guide */
+.guide-head { max-width: 62ch; }
+.guide-head h2 { font: 780 clamp(28px, 4vw, 40px)/1.08 var(--f-ui); letter-spacing: -0.03em; }
+.guide-head p { margin: 12px 0 18px; color: var(--ink-2); font-size: 16px; }
+.perks { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.perks li { display: grid; grid-template-columns: 40px 1fr; column-gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+.perks .ic { grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); }
+.perks strong { font-weight: 700; }
+.perks span:last-child { font-size: 13px; color: var(--ink-2); }
+.devices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 22px; align-items: start; }
+.device { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 22px; box-shadow: var(--shadow); }
+.device header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dev-tag { font: 700 11px var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+.device .you { display: none; font: 700 11px var(--f-ui); color: var(--accent-text); background: var(--accent-soft); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.device.mine { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow-lift); }
+.device.mine .you { display: inline-block; }
+.device h3 { font: 750 22px var(--f-ui); letter-spacing: -0.015em; margin: 8px 0 14px; }
+.device ol { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 14px; }
+.device li { counter-increment: s; position: relative; padding-left: 38px; font-size: 14.5px; }
+.device li::before { content: counter(s); position: absolute; left: 0; top: -1px; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--bg); font: 700 13px/26px var(--f-mono); text-align: center; }
+.device .note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.faq { margin-top: 30px; max-width: 760px; }
+.faq h3 { font: 750 22px var(--f-ui); letter-spacing: -0.015em; margin-bottom: 8px; }
+.faq details { border-bottom: 1px solid var(--line); padding: 12px 0; }
+.faq summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 400 20px/1 var(--f-mono); color: var(--ink-2); }
+.faq details[open] summary::after { content: "−"; }
+.faq details p { margin-top: 8px; color: var(--ink-2); font-size: 14.5px; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-bottom: 12px; }
+.foot-links a { font-weight: 600; color: var(--ink); text-decoration: none; }
+.foot-links a:hover { text-decoration: underline; }
+
 /* ------------------------------------------------------------- responsive */
 @media (max-width: 979px) {
+  .devices { grid-template-columns: minmax(0, 1fr); }
+  .perks { grid-template-columns: minmax(0, 1fr); }
   .news-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .side {
     position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 60; max-height: 86vh; overflow-y: auto;

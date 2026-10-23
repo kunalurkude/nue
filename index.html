@@ -33,6 +33,7 @@
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="tab-news" aria-controls="panel-news" aria-selected="true">News</button>
       <button class="tab" role="tab" id="tab-stocks" aria-controls="panel-stocks" aria-selected="false" tabindex="-1">Stocks</button>
+      <button class="tab" role="tab" id="tab-install" aria-controls="panel-install" aria-selected="false" tabindex="-1">Get the app</button>
     </nav>
     <div class="tools">
       <button class="pill-btn" id="installBtn" type="button" hidden><span class="ic" data-icon="install"></span>Install app</button>
@@ -153,9 +154,71 @@
     <p class="disclaimer">Technical reads use price history only (trend, momentum, range). They ignore earnings, valuation and news, and are not investment advice. Prices can be delayed.</p>
   </section>
 
+  <!-- INSTALL GUIDE -->
+  <section id="panel-install" role="tabpanel" aria-labelledby="tab-install" hidden>
+    <div class="guide-head">
+      <h2>Add nue to your home screen</h2>
+      <p>nue installs straight from your browser. No app store, no account, nothing to download. It opens full screen like any other app and keeps working offline with your last stories.</p>
+      <button class="btn" id="installNow" type="button" hidden>Install nue now</button>
+    </div>
+
+    <ul class="perks">
+      <li><span class="ic" data-icon="install"></span><strong>One tap away</strong><span>Its own icon on your home screen or desktop.</span></li>
+      <li><span class="ic" data-icon="wifi"></span><strong>Works offline</strong><span>Your latest stories and prices stay readable without a signal.</span></li>
+      <li><span class="ic" data-icon="refresh"></span><strong>Always current</strong><span>Updates itself. Nothing to reinstall.</span></li>
+    </ul>
+
+    <div class="devices">
+      <article class="device" data-device="android">
+        <header><span class="dev-tag">Android phones and tablets</span><span class="you">Your device</span></header>
+        <h3>Chrome</h3>
+        <ol>
+          <li>Open <strong>kunalurkude.github.io/nue</strong> in Chrome.</li>
+          <li>Tap the orange <strong>Install app</strong> button at the top. If you do not see it, tap the <strong>⋮</strong> menu, then <strong>Install app</strong> (or <strong>Add to Home screen</strong>).</li>
+          <li>Tap <strong>Install</strong> to confirm.</li>
+          <li>Open nue from your home screen or app drawer.</li>
+        </ol>
+        <p class="note">Samsung Internet: tap the <strong>≡</strong> menu, then <strong>Add page to</strong>, then <strong>Home screen</strong>.</p>
+      </article>
+
+      <article class="device" data-device="ios">
+        <header><span class="dev-tag">iPhone and iPad</span><span class="you">Your device</span></header>
+        <h3>Safari</h3>
+        <ol>
+          <li>Open <strong>kunalurkude.github.io/nue</strong> in Safari.</li>
+          <li>Tap the <strong>Share</strong> button. On iPhone it is in the bottom bar, on iPad in the top bar.</li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+          <li>Keep <strong>Open as Web App</strong> switched on, then tap <strong>Add</strong>.</li>
+        </ol>
+        <p class="note">On iOS 16.4 and later, Chrome and Edge can do this too: Share, then Add to Home Screen.</p>
+      </article>
+
+      <article class="device" data-device="desktop">
+        <header><span class="dev-tag">Windows, Mac and Chromebook</span><span class="you">Your device</span></header>
+        <h3>Chrome or Edge</h3>
+        <ol>
+          <li>Open <strong>kunalurkude.github.io/nue</strong>.</li>
+          <li>Click the <strong>Install</strong> icon at the right end of the address bar, or the <strong>Install app</strong> button at the top of nue.</li>
+          <li>Click <strong>Install</strong>.</li>
+          <li>nue opens in its own window and appears in your Start menu, Launchpad or app list.</li>
+        </ol>
+        <p class="note">Safari on Mac: File, then <strong>Add to Dock</strong>.</p>
+      </article>
+    </div>
+
+    <div class="faq">
+      <h3>Trouble installing?</h3>
+      <details><summary>I do not see an Install option</summary><p>Use the full browser (Chrome or Edge on Android and desktop, Safari on iPhone and iPad). Private windows and the browser built into other apps, such as Instagram or WhatsApp, hide the option. Open the link in your normal browser instead.</p></details>
+      <details><summary>How do I remove it?</summary><p>Press and hold the nue icon, then choose Remove or Uninstall. On desktop, open nue and use the menu in its window.</p></details>
+      <details><summary>Do I get updates?</summary><p>Yes. When a new version is ready, nue shows an Update button at the bottom of the screen.</p></details>
+      <details><summary>Where is my data stored?</summary><p>Your topics, saved stories and watchlist stay on your device. Nothing is sent to an account.</p></details>
+    </div>
+  </section>
+
 </main>
 
 <footer class="wrap foot">
+  <nav class="foot-links" aria-label="Footer"><a href="#news">News</a><a href="#stocks">Stocks</a><a href="#install">Get the app</a><a href="https://github.com/kunalurkude/nue" target="_blank" rel="noopener noreferrer">Source on GitHub</a></nav>
   <p>Headlines come from Google News, with Bing and Yahoo News as backups. Prices come from Yahoo Finance. Both are fetched through nue's own relay. Your topics, saved stories and watchlist stay in this browser.</p>
 </footer>
 

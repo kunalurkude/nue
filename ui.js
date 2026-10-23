@@ -51,28 +51,34 @@
     $('#scrim').classList.toggle('on', open || $('#side').classList.contains('open'));
   }
 
-  if (installBtn && !standalone) {
-    // iPhones and iPads cannot be asked to install, so show them where the Share menu is instead.
-    if (isIOS) showInstall(true);
+  var installNow = $('#installNow');
+  function goGuide() { location.hash = '#install'; }
+  async function runInstall() {
+    if (deferred) {
+      deferred.prompt();
+      try { await deferred.userChoice; } catch (e) { /* ignore */ }
+      deferred = null;
+      if (installNow) installNow.hidden = true;
+    } else {
+      goGuide();
+    }
+  }
+  if (!standalone) {
+    // Always offer the button; when the browser cannot be asked to install, it opens the step by step guide.
+    showInstall(true);
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       deferred = e;
-      showInstall(true);
+      if (installNow) installNow.hidden = false;
     });
-    installBtn.addEventListener('click', async function () {
-      if (deferred) {
-        deferred.prompt();
-        try { await deferred.userChoice; } catch (e) { /* ignore */ }
-        deferred = null;
-        showInstall(false);
-      } else if (isIOS) {
-        openIos(true);
-      } else {
-        toast('Use your browser menu, then "Install app" or "Add to Home screen".', { ms: 4200 });
-      }
-    });
-    window.addEventListener('appinstalled', function () { showInstall(false); toast('nue is installed'); });
+    if (installBtn) installBtn.addEventListener('click', runInstall);
+    if (installNow) installNow.addEventListener('click', runInstall);
+    window.addEventListener('appinstalled', function () { showInstall(false); if (installNow) installNow.hidden = true; toast('nue is installed'); });
   }
+  // Mark the guide card that matches this device.
+  var kind = isIOS ? 'ios' : /android/i.test(navigator.userAgent) ? 'android' : 'desktop';
+  var card = document.querySelector('.device[data-device="' + kind + '"]');
+  if (card) card.classList.add('mine');
   var iosClose = $('#iosClose');
   if (iosClose) iosClose.addEventListener('click', function () { openIos(false); });
 

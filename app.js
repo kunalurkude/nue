@@ -443,7 +443,11 @@
     if (!title) return;
     var date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
     title.replaceChildren(greeting(), h('span', { class: 'dot' }, '.'));
-    if (currentTab === 'stocks') {
+    if (currentTab === 'install') {
+      kick.textContent = 'Install · Phone, tablet and desktop';
+      sub.textContent = 'Add nue to your home screen in under a minute.';
+      title.replaceChildren('Get the app', h('span', { class: 'dot' }, '.'));
+    } else if (currentTab === 'stocks') {
       kick.textContent = date + ' · Markets';
       sub.textContent = (S.updated ? 'Prices updated ' + hhmm(S.updated) + '. ' : '') + 'Technical reads use price history only.';
     } else {
@@ -1027,7 +1031,7 @@
 
   /* ------------------------------------------------------------- tabs, boot */
 
-  var TABS = ['news', 'stocks'];
+  var TABS = ['news', 'stocks', 'install'];
   function showTab(name, focus) {
     if (TABS.indexOf(name) < 0) name = 'news';
     currentTab = name;
@@ -1042,7 +1046,7 @@
     });
     try { history.replaceState(null, '', '#' + name); } catch (e) { /* ignore */ }
     LS.set('nue.tab', name);
-    if (name === 'news') initNews(); else initStocks();
+    if (name === 'news') initNews(); else if (name === 'stocks') initStocks();
     renderHero();
     updateNav();
   }
@@ -1062,7 +1066,7 @@
   }
   function updateNav() {
     var sheetOpen = $('#side').classList.contains('open');
-    var cur = sheetOpen ? 'topics' : currentTab === 'stocks' ? 'stocks' : N.view === 'saved' ? 'saved' : 'news';
+    var cur = sheetOpen ? 'topics' : currentTab === 'install' ? '' : currentTab === 'stocks' ? 'stocks' : N.view === 'saved' ? 'saved' : 'news';
     document.querySelectorAll('.bn').forEach(function (b) {
       if (b.getAttribute('data-go') === cur) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
