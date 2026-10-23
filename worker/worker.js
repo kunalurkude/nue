@@ -1,7 +1,7 @@
 // nue relay: a tiny Cloudflare Worker that fetches Google News and Yahoo Finance data
 // for the nue web app. Browsers cannot fetch those sites directly, so the app asks this
-// Worker instead. It only fetches Google News search feeds (with Bing News as a fallback when
-// Google refuses) and Yahoo Finance chart data, and only answers nue's own site.
+// Worker instead. It only fetches Google News search feeds (with Bing News, then Yahoo News, as
+// fallbacks when Google refuses) and Yahoo Finance chart data, and only answers nue's own site.
 //
 // Usage: GET https://<your-worker>.workers.dev/?url=<encoded source url>
 
@@ -32,18 +32,24 @@ async function getFrom(url, expectRss) {
     const type = r.headers.get('Content-Type') || 'text/plain';
     const body = await r.text();
     const ok = r.ok && (!expectRss || /<rss[\s>]/.test(body));
-    return { ok: ok, status: r.ok && !ok ? 503 : r.status, type: type, body: body, from: new URL(url).hostname };
+    return {
+      ok: ok, status: r.ok && !ok ? 503 : r.status, type: type, body: body, from: new URL(url).hostname,
+      note: ok ? 'ok' : r.status + ' ' + body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100)
+    };
   } catch (e) {
-    return { ok: false, error: true, status: 502, type: 'text/plain', body: '' };
+    return { ok: false, error: true, status: 502, type: 'text/plain', body: '', from: new URL(url).hostname, note: 'network error' };
   }
 }
 
-// Build the Bing News RSS search that matches a Google News RSS search.
-function bingUrl(g) {
+// Other news searches that match a Google News RSS search, tried in this order if Google refuses.
+function newsFallbacks(g) {
   const q = (g.searchParams.get('q') || '').replace(/\s+when:\w+\s*$/i, '').trim();
-  if (!q) return null;
+  if (!q) return [];
   const mkt = g.searchParams.get('hl') || 'en-US';
-  return 'https://www.bing.com/news/search?q=' + encodeURIComponent(q) + '&format=rss&setmkt=' + encodeURIComponent(mkt);
+  return [
+    'https://www.bing.com/news/search?q=' + encodeURIComponent(q) + '&format=rss&setmkt=' + encodeURIComponent(mkt),
+    'https://news.search.yahoo.com/rss?p=' + encodeURIComponent(q)
+  ];
 }
 
 export default {
@@ -52,6 +58,7 @@ export default {
     const originOk = !origin || ALLOWED_ORIGINS.includes(origin);
     const cors = {
       'Access-Control-Allow-Origin': origin && originOk ? origin : ALLOWED_ORIGINS[0],
+      'Access-Control-Expose-Headers': 'X-Nue-Source',
       'Vary': 'Origin'
     };
 
@@ -73,12 +80,22 @@ export default {
     const cacheKey = new Request(target.toString(), { method: 'GET' });
     let res = await cache.match(cacheKey);
     if (!res) {
-      let got = await getFrom(target.toString(), target.hostname === 'news.google.com');
+      const isNews = target.hostname === 'news.google.com';
+      let got = await getFrom(target.toString(), isNews);
+      const tried = [got];
       // Google News often refuses requests from shared cloud addresses ("automated queries").
-      // When that happens, ask Bing News for the same search instead.
-      if (!got.ok && target.hostname === 'news.google.com') {
-        const alt = bingUrl(target);
-        if (alt) { const b = await getFrom(alt, true); if (b.ok) got = b; }
+      // When that happens, ask other news searches for the same topic instead.
+      if (!got.ok && isNews) {
+        for (const alt of newsFallbacks(target)) {
+          const b = await getFrom(alt, true);
+          tried.push(b);
+          if (b.ok) { got = b; break; }
+        }
+      }
+      if (!got.ok && isNews) {
+        // Plain-text report of what each source answered, so a failure can be diagnosed.
+        const report = 'nue relay: every news source refused this search.\n' + tried.map(t => '- ' + t.from + ': ' + t.note).join('\n');
+        return new Response(report, { status: 503, headers: { ...cors, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
       }
       if (got.error) return new Response('Could not reach the source', { status: 502, headers: cors });
       res = new Response(got.body, {
