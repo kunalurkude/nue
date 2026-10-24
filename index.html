@@ -147,12 +147,12 @@
     <div class="sect-head">
       <h2>Watchlist</h2>
       <form class="add add-sym" id="symForm" autocomplete="off">
-        <label class="sr" for="symInput">Add symbols</label>
-        <input id="symInput" type="text" maxlength="80" placeholder="Add symbols: INFY.NS, AAPL, ^NSEI" spellcheck="false" autocapitalize="characters">
+        <label class="sr" for="symInput">Add a stock by name or code</label>
+        <input id="symInput" type="text" maxlength="80" placeholder="Add a stock: Infosys, TCS, Apple, Nifty" spellcheck="false" autocapitalize="characters">
         <button class="btn" type="submit">Add</button>
       </form>
     </div>
-    <p class="hint">NSE stocks end in <code>.NS</code>, BSE in <code>.BO</code>. US tickers need no suffix. Indices start with <code>^</code>.</p>
+    <p class="hint">Type a company name or short code, like <code>Infosys</code>, <code>TCS</code> or <code>Apple</code>. Separate several with commas. Indian stocks are picked first.</p>
     <p class="status" id="stockStatus" role="status" aria-live="polite"></p>
 
     <div class="scroll">

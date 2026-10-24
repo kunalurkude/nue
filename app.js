@@ -575,6 +575,91 @@
   }
   function validSym(s) { return /^[\^A-Z0-9.\-=&]{1,20}$/.test(s); }
 
+  /* Name lookup. People type "Infosys" or "INFY", not "INFY.NS". Popular Indian names resolve
+     from this list instantly (works offline); anything else goes to Yahoo's symbol search. */
+  var KNOWN = [
+    ['RELIANCE.NS', 'reliance industries ril'], ['TCS.NS', 'tata consultancy services'], ['HDFCBANK.NS', 'hdfc bank'],
+    ['INFY.NS', 'infosys'], ['ICICIBANK.NS', 'icici bank'], ['SBIN.NS', 'state bank of india sbi'],
+    ['BHARTIARTL.NS', 'bharti airtel airtel'], ['ITC.NS', 'itc'], ['LT.NS', 'larsen and toubro l&t'],
+    ['KOTAKBANK.NS', 'kotak mahindra bank kotak'], ['HINDUNILVR.NS', 'hindustan unilever hul'], ['AXISBANK.NS', 'axis bank'],
+    ['BAJFINANCE.NS', 'bajaj finance'], ['BAJAJFINSV.NS', 'bajaj finserv'], ['MARUTI.NS', 'maruti suzuki maruti'],
+    ['SUNPHARMA.NS', 'sun pharma sun pharmaceutical'], ['TATASTEEL.NS', 'tata steel'], ['WIPRO.NS', 'wipro'],
+    ['HCLTECH.NS', 'hcl technologies hcl tech'], ['ASIANPAINT.NS', 'asian paints'], ['NTPC.NS', 'ntpc'],
+    ['POWERGRID.NS', 'power grid'], ['ONGC.NS', 'ongc oil and natural gas'], ['ULTRACEMCO.NS', 'ultratech cement ultratech'],
+    ['TITAN.NS', 'titan'], ['M&M.NS', 'mahindra and mahindra mahindra m&m'], ['ADANIENT.NS', 'adani enterprises'],
+    ['ADANIPORTS.NS', 'adani ports'], ['COALINDIA.NS', 'coal india'], ['JSWSTEEL.NS', 'jsw steel'],
+    ['NESTLEIND.NS', 'nestle india nestle'], ['TECHM.NS', 'tech mahindra'], ['HINDALCO.NS', 'hindalco'],
+    ['GRASIM.NS', 'grasim'], ['CIPLA.NS', 'cipla'], ['DRREDDY.NS', 'dr reddys dr reddy'],
+    ['EICHERMOT.NS', 'eicher motors royal enfield'], ['BRITANNIA.NS', 'britannia'], ['APOLLOHOSP.NS', 'apollo hospitals'],
+    ['HEROMOTOCO.NS', 'hero motocorp hero'], ['BPCL.NS', 'bpcl bharat petroleum'], ['INDUSINDBK.NS', 'indusind bank'],
+    ['SBILIFE.NS', 'sbi life'], ['HDFCLIFE.NS', 'hdfc life'], ['TATACONSUM.NS', 'tata consumer'],
+    ['ETERNAL.NS', 'eternal zomato'], ['IRCTC.NS', 'irctc'], ['LICI.NS', 'lic life insurance corporation'],
+    ['DMART.NS', 'dmart avenue supermarts'], ['VEDL.NS', 'vedanta'], ['IOC.NS', 'ioc indian oil'],
+    ['GAIL.NS', 'gail'], ['BANKBARODA.NS', 'bank of baroda'], ['PNB.NS', 'punjab national bank pnb'],
+    ['YESBANK.NS', 'yes bank'], ['IDEA.NS', 'vodafone idea vi'], ['PAYTM.NS', 'paytm one97'],
+    ['HAL.NS', 'hal hindustan aeronautics'], ['BEL.NS', 'bel bharat electronics'], ['TRENT.NS', 'trent'],
+    ['IDFCFIRSTB.NS', 'idfc first bank'], ['TATAPOWER.NS', 'tata power'], ['SUZLON.NS', 'suzlon'],
+    ['^NSEI', 'nifty nifty50 nifty 50'], ['^BSESN', 'sensex bse sensex'], ['^NSEBANK', 'bank nifty banknifty nifty bank']
+  ];
+  function words(t) { return String(t).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function lookupKnown(q) {
+    var w = words(q);
+    if (!w) return null;
+    var squashed = w.replace(/ /g, '');
+    var i, k;
+    for (i = 0; i < KNOWN.length; i++) { // exact: ticker or a full name
+      k = KNOWN[i];
+      var base = words(k[0].replace(/\.NS$/, '')).replace(/ /g, '');
+      if (squashed === base) return k[0];
+    }
+    for (i = 0; i < KNOWN.length; i++) {
+      k = KNOWN[i];
+      if (words(k[1]) === w || (' ' + words(k[1]) + ' ').indexOf(' ' + w + ' ') >= 0) return k[0];
+    }
+    if (w.length >= 3) { // typing the start of a name: "infos", "tata st"
+      for (i = 0; i < KNOWN.length; i++) if (words(KNOWN[i][1]).indexOf(w) === 0) return KNOWN[i][0];
+    }
+    return null;
+  }
+
+  // Ask Yahoo's search for the best match. Indian listings win ties because nue is India-first.
+  async function searchSymbol(q) {
+    var url = 'https://query1.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(q) +
+      '&quotesCount=10&newsCount=0&listsCount=0';
+    var text = await viaProxy(url, function (t) { return t.trim().charAt(0) === '{'; });
+    var list = (JSON.parse(text).quotes || []).filter(function (x) {
+      return x.symbol && /^(EQUITY|ETF|INDEX|MUTUALFUND|CURRENCY|FUTURE)$/.test(x.quoteType || '');
+    });
+    if (!list.length) return null;
+    var up = String(q).trim().toUpperCase();
+    function rank(x) {
+      var sym = x.symbol.toUpperCase(), r = 0;
+      if (sym === up) r += 4;
+      if (sym === up + '.NS') r += 3;
+      if (sym === up + '.BO') r += 2;
+      if (/\.NS$/.test(sym)) r += 1.5; else if (/\.BO$/.test(sym)) r += 1;
+      return r;
+    }
+    var best = list[0];
+    list.forEach(function (x) { if (rank(x) > rank(best)) best = x; });
+    return { symbol: best.symbol.toUpperCase(), name: best.longname || best.shortname || best.symbol };
+  }
+
+  // Turn whatever the person typed into a symbol. Returns { sym, name } or null.
+  async function resolveInput(raw) {
+    var t = String(raw).trim();
+    if (!t) return null;
+    if (/[.:^=]/.test(t) && !/\s/.test(t)) { var n = normSym(t); return validSym(n) ? { sym: n } : null; }
+    var known = lookupKnown(t);
+    if (known) return { sym: known };
+    try {
+      var hit = await searchSymbol(t);
+      return hit ? { sym: hit.symbol, name: hit.name } : null; // searched fine, nothing matches
+    } catch (e) { /* search unreachable: fall through and try it as a code */ }
+    var plain = normSym(t);
+    return /^[A-Z0-9\-&]{1,15}$/.test(plain) ? { sym: plain, guess: true } : null;
+  }
+
   async function fetchChart(sym, range, force) {
     var key = 'nue.c.' + sym + '.' + range;
     var cached = LS.get(key, null);
@@ -655,8 +740,9 @@
   function renderStockStatus() {
     var el = $('#stockStatus');
     el.replaceChildren();
-    if (S.pending > 0) { el.textContent = 'Loading prices… ' + (S.watch.length - S.pending) + ' of ' + S.watch.length; return; }
-    var kids = [];
+    var note = S.note ? S.note + ' ' : '';
+    if (S.pending > 0) { el.textContent = note + 'Loading prices… ' + (S.watch.length - S.pending) + ' of ' + S.watch.length; return; }
+    var kids = note ? [note] : [];
     if (S.updated) kids.push('Updated ' + hhmm(S.updated) + '. ');
     var bad = S.watch.filter(function (s) { return S.data[s] && S.data[s].err; });
     if (bad.length) kids.push(h('span', { class: 'err' }, bad.length + ' symbol' + (bad.length === 1 ? '' : 's') + ' could not load. '));
@@ -782,25 +868,40 @@
     renderStockStatus();
   }
 
-  $('#symForm').addEventListener('submit', function (e) {
+  var addBusy = false;
+  $('#symForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    var inp = $('#symInput');
-    var parts = inp.value.split(/[\s,;]+/).map(normSym).filter(Boolean);
-    var added = [], bad = [];
-    parts.forEach(function (s) {
-      if (!validSym(s)) { bad.push(s); return; }
-      if (S.watch.indexOf(s) >= 0 || added.indexOf(s) >= 0) return;
-      if (S.watch.length + added.length >= MAX_WATCH) return;
-      added.push(s);
-    });
+    if (addBusy) return;
+    var inp = $('#symInput'), status = $('#stockStatus');
+    var parts = inp.value.split(/[,;\n]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!parts.length) return;
+    addBusy = true;
+    status.textContent = 'Looking up ' + (parts.length > 1 ? parts.length + ' stocks' : parts[0]) + '…';
+    var added = [], bad = [], dup = [], notes = [], full = false;
+    for (var i = 0; i < parts.length; i++) {
+      var r = await resolveInput(parts[i]);
+      if (!r) { bad.push(parts[i]); continue; }
+      if (S.watch.indexOf(r.sym) >= 0 || added.indexOf(r.sym) >= 0) { dup.push(r.sym); continue; }
+      if (S.watch.length + added.length >= MAX_WATCH) { full = true; break; }
+      added.push(r.sym);
+      if (r.name && words(parts[i]) !== words(r.sym)) notes.push(r.name + ' (' + r.sym + ')');
+    }
+    addBusy = false;
     inp.value = '';
-    if (bad.length) $('#stockStatus').textContent = 'Skipped invalid symbol' + (bad.length > 1 ? 's' : '') + ': ' + bad.join(', ');
-    if (!added.length) return;
+    var msg = [];
+    if (added.length) msg.push('Added ' + (notes.length ? notes.join(', ') : added.join(', ')) + '.');
+    if (dup.length) msg.push(dup.join(', ') + ' already in your list.');
+    if (bad.length) msg.push('Could not find: ' + bad.join(', ') + '. Try the company name or its NSE code.');
+    if (full) msg.push('Watchlist is full (' + MAX_WATCH + ').');
+    S.note = msg.join(' ');
+    clearTimeout(S.noteT); S.noteT = setTimeout(function () { S.note = ''; renderStockStatus(); }, 12000);
+    if (!added.length) { renderStockStatus(); return; }
     S.watch = S.watch.concat(added);
     LS.set('nue.watch', S.watch);
     S.sel = added[0];
     renderTable();
-    added.forEach(function (s) { loadSymbol(s, false); });
+    added.forEach(function (sym) { loadSymbol(sym, false); });
+    renderStockStatus();
   });
 
   /* ------------------------------------------------------------ stock detail */

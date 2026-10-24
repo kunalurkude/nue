@@ -1,7 +1,7 @@
 // nue relay: a tiny Cloudflare Worker that fetches Google News and Yahoo Finance data
 // for the nue web app. Browsers cannot fetch those sites directly, so the app asks this
 // Worker instead. It only fetches Google News search feeds (with Bing News, then Yahoo News, as
-// fallbacks when Google refuses) and Yahoo Finance chart data, and only answers nue's own site.
+// fallbacks when Google refuses), Yahoo Finance chart data and Yahoo symbol search, and only answers nue's own site.
 //
 // Usage: GET https://<your-worker>.workers.dev/?url=<encoded source url>
 
@@ -15,7 +15,7 @@ function allowedSource(u) {
   if (u.protocol !== 'https:') return false;
   if (u.hostname === 'news.google.com') return u.pathname === '/rss/search';
   if (u.hostname === 'query1.finance.yahoo.com' || u.hostname === 'query2.finance.yahoo.com') {
-    return u.pathname.startsWith('/v8/finance/chart/');
+    return u.pathname.startsWith('/v8/finance/chart/') || u.pathname === '/v1/finance/search';
   }
   return false;
 }

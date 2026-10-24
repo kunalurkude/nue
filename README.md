@@ -14,7 +14,7 @@ No build step, no backend, no accounts. It is three static files, so it runs on 
 
 **Stocks**
 - Market strip for Nifty 50, Sensex, S&P 500 and Nasdaq.
-- A watchlist of up to 15 symbols. NSE stocks end in `.NS`, BSE in `.BO`, US tickers need no suffix, indices start with `^`. `NSE:INFY` and `BSE:INFY` are accepted too.
+- A watchlist of up to 15 stocks. Type a company name or short code (`Infosys`, `TCS`, `Apple`, `Nifty`) and nue finds the symbol. Exact symbols still work: NSE ends in `.NS`, BSE in `.BO`, US tickers need no suffix, indices start with `^`, and `NSE:INFY` is accepted too.
 - Per symbol: price chart (3M, 6M, 1Y) with 50 and 200 day averages, returns, 52-week range, RSI(14), MACD, support and resistance, volatility, worst drawdown.
 - A **technical read** (Bullish, Leaning bullish, Neutral, Leaning bearish, Bearish) with every signal that went into it listed in plain words.
 - Recent headlines for the selected company.
