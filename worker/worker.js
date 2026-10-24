@@ -69,7 +69,7 @@ export default {
     if (!originOk) return new Response('Origin not allowed', { status: 403, headers: cors });
 
     const raw = new URL(request.url).searchParams.get('url');
-    if (!raw) return new Response('nue relay is running (v3). Pass ?url=<encoded source url>.', { status: 200, headers: cors });
+    if (!raw) return new Response('nue relay is running (v4, with stock search). Pass ?url=<encoded source url>.', { status: 200, headers: cors });
 
     let target;
     try { target = new URL(raw); } catch (e) { return new Response('Bad url', { status: 400, headers: cors }); }
