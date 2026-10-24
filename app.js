@@ -637,7 +637,9 @@
       if (sym === up) r += 4;
       if (sym === up + '.NS') r += 3;
       if (sym === up + '.BO') r += 2;
-      if (/\.NS$/.test(sym)) r += 1.5; else if (/\.BO$/.test(sym)) r += 1;
+      if (/\.NS$/.test(sym)) r += 1.5;
+      else if (/\.BO$/.test(sym)) r += 1;
+      else if (sym.indexOf('.') < 0) r += 1.2; // main listing (AAPL) beats a foreign one (APC.F)
       return r;
     }
     var best = list[0];
